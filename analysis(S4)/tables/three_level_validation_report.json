@@ -1,0 +1,21 @@
+{
+  "valid": true,
+  "generated_at": "2026-05-31T16:22:34",
+  "checks": {
+    "level1_rows": {
+      "actual": 6557,
+      "expected": 6557
+    },
+    "level2_agents": {
+      "actual": 592,
+      "expected": 592
+    },
+    "level3_rows": {
+      "actual": 1142,
+      "expected": 1142
+    },
+    "analysis_master_removed": {
+      "passed": true
+    }
+  }
+}
