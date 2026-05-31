@@ -948,6 +948,19 @@ def test_findings_summary_contains_thesis_method_and_interpretation_blocks(tmp_p
         "Sparse-cell",
         "JobCategory is not statistically significant",
         "high-centrality agents gain less from matching",
+        "Step-by-step workflow",
+        "Step 1 - Source readiness precheck",
+        "Step 2 - Build separate level-specific master files",
+        "Step 3 - Standardize topic labels",
+        "Step 4 - Assign variable roles before modeling",
+        "Step 5 - Run Level 1 content analysis",
+        "Step 6 - Run Level 2 agent/network analysis",
+        "Step 7 - Run Level 3 content-agent matching analysis",
+        "Step 8 - Generate tables, figures, validation files, and notebook",
+        "What this step does",
+        "Why this step matters",
+        "How to read the output",
+        "Thesis wording",
     ]:
         assert expected in text
 
