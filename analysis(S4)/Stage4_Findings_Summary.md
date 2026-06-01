@@ -1,6 +1,6 @@
 # Stage 4 Findings Summary
 
-Generated: 2026-05-31T22:31:36
+Generated: 2026-06-01T20:32:14
 
 ## Research question
 
@@ -104,7 +104,7 @@ How to read the output: the main complete-case n is 1,142. `MatchScore_mean` cap
 
 Key continuous matching signal: `z_MatchScore_mean` on `log_agent_topic_cascade_size_mean`: coef=0.260, standardized beta=0.260, p=3.9e-07.
 
-Key binary/proportion matching signal: `z_ProfessionContentMatch_mean` on `log_agent_topic_cascade_size_mean`: coef=0.085, standardized beta=0.085, p=0.0468.
+Key binary/proportion matching signal: `z_ProfessionContentMatch_mean` on `log_agent_topic_cascade_size_mean`: coef=0.120, standardized beta=0.120, p=0.0143.
 
 Moderation signal: `z_MatchScore_mean:z_agent_deg_centrality_mean` on `log_agent_topic_cascade_size_mean`: coef=-0.331, standardized beta=-0.331, p=2.88e-14.
 
@@ -164,7 +164,7 @@ Method: one row per agent and English `TopContentCluster`. `MatchScore_mean` and
 
 Key continuous matching signal: `z_MatchScore_mean` on `log_agent_topic_cascade_size_mean`: coef=0.260, standardized beta=0.260, p=3.9e-07.
 
-Key binary/proportion matching signal: `z_ProfessionContentMatch_mean` on `log_agent_topic_cascade_size_mean`: coef=0.085, standardized beta=0.085, p=0.0468.
+Key binary/proportion matching signal: `z_ProfessionContentMatch_mean` on `log_agent_topic_cascade_size_mean`: coef=0.120, standardized beta=0.120, p=0.0143.
 
 Moderation signal: `z_MatchScore_mean:z_agent_deg_centrality_mean` on `log_agent_topic_cascade_size_mean`: coef=-0.331, standardized beta=-0.331, p=2.88e-14.
 
