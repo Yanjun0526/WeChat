@@ -2,11 +2,11 @@
 
 ## Summary
 
-Stage 4 must strictly follow the three-level analytical framework described in the interim report: **content**, **agent/network**, and **content-agent matching**. The previous `analysis_master.xlsx` mixed variables from multiple analytical levels and should no longer be used as the central Stage 4 dataset.
+Stage 4 must strictly follow the three-level analytical framework described in the interim report, with one important clarification: the three levels are **content**, **agent characteristics**, and **content-agent matching**. Agents are part of the social network and are the origin points of diffusion, so their observable features can proxy the local audience and sharing context. Diffusion-derived network metrics, however, are reconstructed from observed diffusion records and should be treated as diffusion-pattern descriptors rather than ordinary ex-ante network predictors. The previous `analysis_master.xlsx` mixed variables from multiple analytical levels and should no longer be used as the central Stage 4 dataset.
 
 Stage 4 answers two connected research questions:
 
-1. **Are content, agent/network, and content-agent matching factors associated with diffusion effectiveness?**
+1. **Are content factors, agent characteristics, and content-agent matching factors associated with diffusion effectiveness?**
 2. **If they are associated, which specific factors matter, and through which diffusion dimensions?**
 
 Use "affect" only when describing the broad research motivation. In statistical findings and model interpretation, use association language unless a causal identification strategy is explicitly justified.
@@ -16,7 +16,7 @@ The thesis theme remains:
 ```text
 One Size Does Not Fit All:
 Marketing diffusion effectiveness depends not only on content,
-not only on agent/network capability,
+not only on agent characteristics and embedded sharing context,
 but also on the fit between content and agent-topic context.
 ```
 
@@ -88,7 +88,7 @@ Data leakage must be handled explicitly.
 
 - Only variables that represent diffusion effectiveness should be used as dependent variables/outcomes.
 - Variables mechanically calculated from the same diffusion process must not be used as predictors for an outcome that they directly or indirectly define.
-- Diffusion-structure variables such as depth, width, centrality, Wiener index, structural virality, repeat exposure, and reshare metrics may be outcomes, mechanism descriptors, or robustness indicators depending on the model, but their role must be declared before modeling.
+- Diffusion-structure variables such as depth, width, centrality, Wiener index, structural virality, repeat exposure, and reshare metrics may be outcomes, diffusion-pattern descriptors, or robustness indicators depending on the model, but their role must be declared before modeling.
 - Agent demographic and job attributes can be treated as explanatory variables because they are agent attributes rather than post-hoc diffusion outcomes.
 - Content features from Stage 2 can be treated as explanatory variables because they describe article content rather than observed diffusion performance.
 - Match variables can be used in Level 3 only, because they are designed to represent content-agent alignment. They should not be mixed into Level 1 content-only models.
@@ -100,7 +100,7 @@ outcome
 content predictor
 agent attribute predictor
 matching predictor
-mechanism descriptor
+diffusion-pattern descriptor
 control
 validation-only field
 ```
@@ -236,7 +236,7 @@ Current limitations:
 
 - It does not contain `agent_gender`, `agent_dep`, `agent_job`, or `JobCategory`; these must be merged from the cleaned agent attribute sources and the existing S3-assigned `JobCategory`.
 - It does not contain `article_count_per_agent` or `log_article_count_per_agent`; these must be calculated from `final_results.xlsx`.
-- It already contains `matchscore_mean` and `profession_content_match_mean`, but these are content-agent matching variables. They should not be used in the Level 2 agent/network core model and should be excluded from the Level 2 modeling table or marked as validation-only.
+- It already contains `matchscore_mean` and `profession_content_match_mean`, but these are content-agent matching variables. They should not be used in the Level 2 agent-characteristic core model and should be excluded from the Level 2 modeling table or marked as validation-only.
 - Unique agents: 592.
 - Duplicate `agent_name` rows: 0.
 
@@ -394,9 +394,9 @@ Corrected-layer checks:
 
 These belong to Level 2 or Level 3. Level 1 should remain a clean content-effect analysis. `MatchScore` and `ProfessionContentMatch` should not be included in `level1_content_master.xlsx`; if needed for validation, place them in a separate validation sheet rather than in the Level 1 modeling table.
 
-### Level 2: Agent / Network Level
+### Level 2: Agent-Characteristic Level
 
-**Purpose:** answer whether agent/network characteristics affect overall diffusion capability and identify which agent/network factors matter.
+**Purpose:** answer whether agent characteristics are associated with observed average diffusion patterns. In this level, agent features are interpreted as characteristics of embedded sharers and as proxies for local audience/sharing context, not as direct measures of post-hoc network structure.
 
 **Input files:**
 
@@ -417,7 +417,7 @@ one row = one agent
 
 **Variables to include:**
 
-Agent/network predictors:
+Agent-characteristic predictors:
 
 - `JobCategory`
 - `agent_gender`
@@ -436,7 +436,7 @@ Descriptive agent attributes:
 
 `JobCategory` is the main categorical role variable for Level 2 regression. `agent_dep` and `agent_job` should be used for descriptive statistics, category interpretation, and appendix tables only. They should not be entered into the same core regression with `JobCategory` because they are fine-grained sources of the role category and can create collinearity or over-fragmentation.
 
-Network and diffusion-structure descriptors:
+Diffusion-pattern descriptors reconstructed from observed diffusion:
 
 - `agent_deg_centrality_mean`
 - `avg_out_degree_centrality_mean`
@@ -446,7 +446,7 @@ Network and diffusion-structure descriptors:
 - `repeat_exposure_1st_nodes_pct`
 - `repeat_exposure_2nd_nodes_pct`
 
-These descriptors are useful for mechanism discussion and agent heterogeneity profiling. If they are calculated from the observed diffusion process, they must not be presented as leakage-free ex-ante predictors of mechanically related diffusion outcomes.
+These descriptors are useful for describing diffusion-pattern heterogeneity and profiling how agents appear within reconstructed diffusion records. They must not be presented as leakage-free ex-ante predictors of mechanically related diffusion outcomes.
 
 Agent-level diffusion outcomes:
 
@@ -481,9 +481,9 @@ Supporting variability measures:
 - `profession_content_match_mean`
 - opportunity matrix variables
 
-Level 2 should focus on agent/network heterogeneity, not topic-specific fit.
+Level 2 should focus on agent-characteristic heterogeneity, not topic-specific fit.
 
-Although `agent_level_results.xlsx` already contains `matchscore_mean` and `profession_content_match_mean`, these variables summarize content-agent matching across the agent's articles. They belong conceptually to Level 3 or to a clearly labeled bridge/validation appendix. They should not be included in the Level 2 agent/network modeling table or Level 2 core regressions.
+Although `agent_level_results.xlsx` already contains `matchscore_mean` and `profession_content_match_mean`, these variables summarize content-agent matching across the agent's articles. They belong conceptually to Level 3 or to a clearly labeled bridge/validation appendix. They should not be included in the Level 2 agent-characteristic modeling table or Level 2 core regressions.
 
 ### Level 3: Content-Agent Matching / Agent-Topic Level
 
@@ -569,7 +569,7 @@ Descriptive agent attributes:
 - Do not silently choose among conflicting categories without reporting the conflict.
 - In Level 3 core regression, use `JobCategory` as the main agent role category. Use `agent_dep` and `agent_job` for interpretation and appendix summaries, not as simultaneous core categorical predictors.
 
-Network/mechanism descriptors:
+Diffusion-pattern descriptors:
 
 - `agent_deg_centrality_mean`
 - `avg_out_degree_centrality_mean`
@@ -727,25 +727,25 @@ Thesis interpretation:
 Content factors are associated with diffusion, but different content features affect different diffusion dimensions.
 ```
 
-### Part 2: Does Agent / Network Structure Affect Diffusion?
+### Part 2: Are Agent Characteristics Associated With Observed Diffusion Patterns?
 
 Use `level2_agent_network_master.xlsx`.
 
 Main question:
 
 ```text
-Do agent/network characteristics explain differences in overall diffusion capability?
+Are agent characteristics associated with observed average diffusion patterns?
 ```
 
 Analyses:
 
 - Agent-level performance distribution.
-- Network metric distributions.
+- Diffusion-pattern descriptor distributions.
 - Agent job and department group comparisons.
-- Centrality-performance correlations.
+- Centrality-performance associations interpreted as diffusion-pattern description.
 - Repeat-exposure analysis.
 - Agent-level explanatory regressions using `JobCategory`, `agent_gender`, and `log_article_count_per_agent` as primary predictors.
-- Mechanism association analysis for network/diffusion-structure descriptors, with leakage caveats.
+- Descriptive association analysis for diffusion-pattern descriptors, with leakage caveats.
 - Optional top/bottom agent performance profile for descriptive interpretation.
 
 Model families:
@@ -783,7 +783,7 @@ Report a robustness version without `log_article_count_per_agent` to show whethe
 
 `agent_dep` and `agent_job` should be reported in descriptive and appendix tables only, unless a separate robustness model is explicitly labeled as exploratory.
 
-Mechanism model:
+Descriptor association model:
 
 ```text
 log_agent_cascade_size_mean
@@ -794,13 +794,13 @@ log_agent_cascade_size_mean
 + error
 ```
 
-Mechanism blocks should be specified explicitly rather than selected ad hoc:
+Descriptor blocks should be specified explicitly rather than selected ad hoc:
 
 - Centrality block: `agent_deg_centrality_mean`, `avg_out_degree_centrality_mean`
 - Repeat-exposure block: `repeat_exposure_1st_nodes_pct`, `repeat_exposure_2nd_nodes_pct`
 - Network-composition block: `gender_assortativity_mean`
 
-Run these blocks separately before considering a combined model, because the descriptors can be correlated and are often derived from the observed diffusion process. The mechanism model should be labeled as structural association, not as causal or leakage-free prediction. Do not use an outcome as a predictor of itself; for example, do not use `structural_virality_mean` as a mechanism predictor when the dependent variable is `structural_virality_mean`.
+Run these blocks separately before considering a combined model, because the descriptors can be correlated and are often derived from the observed diffusion process. These models should be labeled as descriptive diffusion-pattern associations, not as causal or leakage-free prediction. Do not use an outcome as a predictor of itself; for example, do not use `structural_virality_mean` as a descriptor predictor when the dependent variable is `structural_virality_mean`.
 
 Expected output files:
 
@@ -815,7 +815,7 @@ analysis(S4)/figures/level2_repeat_exposure_patterns.png
 Thesis interpretation:
 
 ```text
-Agent/network heterogeneity matters: some agents systematically generate stronger diffusion, and this variation is related to network position and organizational role.
+Agent-characteristic heterogeneity matters: some agents systematically generate stronger observed diffusion, while reconstructed network metrics describe the diffusion patterns associated with those agents rather than ex-ante network causes.
 ```
 
 ### Part 3: Does Content-Agent Matching Affect Diffusion?
@@ -915,7 +915,7 @@ log_agent_topic_cascade_size_mean
 + error
 ```
 
-Run this moderation model only if Level 2 shows that centrality is meaningfully associated with agent-level diffusion outcomes. This model answers whether centrality changes the association between matching and diffusion; it is not a replacement for the Level 2 centrality analysis. Report it separately from the main matching model and interpret it as mechanism association only.
+Run this moderation model only as a supplementary descriptive analysis. It answers whether the matching-diffusion association differs across reconstructed centrality levels; it is not a replacement for the Level 2 agent-characteristic analysis. Report it separately from the main matching model and interpret it as descriptive heterogeneity only.
 
 Opportunity matrix:
 
@@ -965,15 +965,16 @@ Recommended Results chapter structure:
    - Article length and image richness.
    - Content-only regressions.
 
-3. **Level 2: Agent/network effects**
+3. **Level 2: Agent-characteristic effects**
    - Agent heterogeneity.
-   - Network centrality.
-   - Repeat exposure.
+   - Formal role and gender attributes.
+   - Reconstructed centrality as a diffusion-pattern descriptor.
+   - Repeat exposure as a diffusion-pattern descriptor.
    - Job and department differences.
 
 4. **Level 3: Content-agent matching effects**
    - MatchScore and ProfessionContentMatch at the agent-topic level, reported as separate model specifications.
-   - Conditional MatchScore-by-centrality moderation, only if Level 2 supports centrality relevance.
+   - Conditional MatchScore-by-centrality moderation as supplementary descriptive heterogeneity.
    - Opportunity matrix.
    - Sparse-cell caution.
    - Personalized content assignment implication.
@@ -996,9 +997,9 @@ The Stage 4 contribution should be more than a list of regressions. The distinct
 - LLM-generated content-topic and semantic-consistency variables.
 - Corrected cascade/network metrics from S3.
 - Multi-dimensional diffusion outcomes: reach, depth, reshare, duration, and structural virality.
-- Separation of content effects, agent/network effects, and matching effects.
+- Separation of content effects, agent-characteristic effects, and matching effects.
 - Agent-topic opportunity matrix as the practical "One Size Does Not Fit All" output.
-- Conditional moderation analysis showing whether network centrality changes the value of content-agent matching.
+- Conditional moderation analysis describing whether the matching-diffusion association varies across reconstructed centrality groups.
 - Supplemental cascade-shape classification to translate diffusion outcomes into intuitive propagation patterns.
 
 ## Implementation Changes
@@ -1078,7 +1079,7 @@ run_level3_agent_topic_matching_analysis()
 ```
 
 - `run_level2_agent_network_analysis()` must treat `log_agent_cascade_size_mean` as the primary Level 2 dependent variable and report the secondary outcomes separately.
-- `run_level2_agent_network_analysis()` must run mechanism models in explicit blocks: centrality, repeat exposure, and network composition.
+- `run_level2_agent_network_analysis()` must run descriptor diagnostics in explicit blocks: centrality, repeat exposure, and network composition.
 - `run_level3_agent_topic_matching_analysis()` must report two separate core matching specifications:
   - Model A with `MatchScore_mean`.
   - Model B with `ProfessionContentMatch_mean`.
@@ -1095,7 +1096,7 @@ write_variable_role_map()
 
 ```text
 Level 1 Content
-Level 2 Agent/Network
+Level 2 Agent Characteristics
 Level 3 Agent-Topic Matching
 Integrated Findings
 ```
@@ -1185,7 +1186,7 @@ Required tests:
   - Three-level validation report exists.
 
 - `test_findings_summary_uses_three_level_structure`
-  - Findings summary explicitly contains Level 1 Content, Level 2 Agent/Network, and Level 3 Agent-Topic Matching.
+  - Findings summary explicitly contains Level 1 Content, Level 2 Agent Characteristics, and Level 3 Agent-Topic Matching.
 
 Keep pytest focused on pipeline safety rather than exhaustive statistical proof. The minimum required pytest scope is:
 
@@ -1278,7 +1279,7 @@ analysis(S4)/figures/level3_*.png
 - The interim report's three-level framework has priority over the previous mixed-master implementation.
 - Agent gender and job variables are already prepared before Stage 4 and should be treated as cleaned agent attributes.
 - Level 1 answers content effects only.
-- Level 2 answers agent/network effects only.
+- Level 2 answers agent-characteristic associations only; diffusion-derived network metrics are descriptors or supplementary diagnostics.
 - Level 3 answers content-agent matching effects.
 - English canonical topic labels are the only thesis-facing topic labels in Stage 4 outputs.
 - Opportunity matrix belongs to Level 3 only.

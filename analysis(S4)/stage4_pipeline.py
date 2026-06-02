@@ -1415,7 +1415,7 @@ def write_variable_role_map() -> pd.DataFrame:
         "structural_virality_mean",
         "duration_mean_of_means",
     ]:
-        add(variable, "Level 2", "agent_level_results", "agent-level diffusion outcome", False, True, "Aggregated observed diffusion result.", "Agent/network diffusion capability measure.")
+        add(variable, "Level 2", "agent_level_results", "agent-level diffusion outcome", False, True, "Aggregated observed diffusion result.", "Agent-level average diffusion pattern or capability measure.")
     for variable in [
         "agent_deg_centrality_mean",
         "avg_out_degree_centrality_mean",
@@ -1424,7 +1424,7 @@ def write_variable_role_map() -> pd.DataFrame:
         "repeat_exposure_2nd_nodes_pct",
         "gender_assortativity_mean",
     ]:
-        add(variable, "Level 2", "agent_level_results", "mechanism descriptor", True, False, "Derived from observed diffusion/network; interpret associationally.", "Network position, repeat exposure, or audience composition mechanism.")
+        add(variable, "Level 2", "agent_level_results", "diffusion-pattern descriptor", False, False, "Derived from observed diffusion/network; do not interpret as an ex-ante causal predictor.", "Use only as a supplementary diagnostic or descriptive heterogeneity descriptor.")
 
     for variable in ["agent_name", "TopContentCluster", "JobCategory", "agent_gender"]:
         add(variable, "Level 3", "agent_topic/final_results/S3", "agent-topic grouping variable", True, False, "", "Defines content-agent matching cells and controls.")
@@ -2530,12 +2530,12 @@ def run_level2_agent_network_analysis(master: pd.DataFrame) -> dict[str, pd.Data
             summaries.append(summary)
             coeffs.append(coeff)
 
-    mechanism_blocks = {
-        "level2_mechanism_centrality": ["z_agent_deg_centrality_mean", "z_avg_out_degree_centrality_mean"],
-        "level2_mechanism_repeat_exposure": ["z_repeat_exposure_1st_nodes_pct", "z_repeat_exposure_2nd_nodes_pct"],
-        "level2_mechanism_network_composition": ["z_gender_assortativity_mean"],
+    descriptor_blocks = {
+        "level2_descriptor_centrality": ["z_agent_deg_centrality_mean", "z_avg_out_degree_centrality_mean"],
+        "level2_descriptor_repeat_exposure": ["z_repeat_exposure_1st_nodes_pct", "z_repeat_exposure_2nd_nodes_pct"],
+        "level2_descriptor_network_composition": ["z_gender_assortativity_mean"],
     }
-    for model_name, block_terms in mechanism_blocks.items():
+    for model_name, block_terms in descriptor_blocks.items():
         terms = [term for term in [*core_terms, *block_terms] if term.startswith("C(") or term in df.columns]
         result = _fit_formula(
             df,
@@ -2565,7 +2565,7 @@ def run_level2_agent_network_analysis(master: pd.DataFrame) -> dict[str, pd.Data
                 "repeat_exposure_2nd_nodes_pct",
                 "gender_assortativity_mean",
             ],
-            "level2_mechanism_predictors",
+            "level2_descriptor_variables",
         ),
     }
 
@@ -2575,7 +2575,7 @@ def _level2_centrality_supported(level2_tables: dict[str, pd.DataFrame], alpha: 
     if coeff.empty or not {"model", "term", "p_value"}.issubset(coeff.columns):
         return False
     rows = coeff[
-        coeff["model"].astype(str).eq("level2_mechanism_centrality")
+        coeff["model"].astype(str).eq("level2_descriptor_centrality")
         & coeff["term"].astype(str).isin(["z_agent_deg_centrality_mean", "z_avg_out_degree_centrality_mean"])
     ]
     if rows.empty:
@@ -3177,12 +3177,12 @@ def write_findings_summary(
         moderation_interpretation = "The moderation model was not estimated or did not return the interaction coefficient."
     elif moderation_coef < 0:
         moderation_interpretation = (
-            "In the current run the moderation coefficient is negative, which means high-centrality agents gain less from matching "
-            "while lower-centrality agents rely more on fit to compensate for weaker network position."
+            "In the current run the moderation coefficient is negative, which means the matching-diffusion association is weaker "
+            "among agents with higher reconstructed centrality and stronger among agents with lower reconstructed centrality."
         )
     else:
         moderation_interpretation = (
-            "In the current run the moderation coefficient is non-negative, which means higher centrality does not reduce the association between matching and diffusion."
+            "In the current run the moderation coefficient is non-negative, which means higher reconstructed centrality does not reduce the observed association between matching and diffusion."
         )
 
     text = f"""# Stage 4 Findings Summary
@@ -3191,9 +3191,9 @@ Generated: {datetime.now().isoformat(timespec="seconds")}
 
 ## Research question
 
-Stage 4 answers two linked questions. First, do content factors, agent/network factors, and content-agent matching factors relate to diffusion performance? Second, if they do, which specific factors matter most after keeping the three analytical levels separate?
+Stage 4 answers two linked questions. First, do content factors, agent characteristics, and content-agent matching factors relate to diffusion performance? Second, if they do, which specific factors matter most after keeping the three analytical levels separate?
 
-The empirical logic is deliberately sequential. Level 1 asks whether the article itself matters. Level 2 asks whether the agent and network position matter. Level 3 then asks whether the fit between a specific agent and a specific content topic matters after the first two layers are understood. This sequence supports the thesis claim that marketing diffusion is not a one-size-fits-all problem.
+The empirical logic is deliberately sequential. Level 1 asks whether the article itself matters. Level 2 asks whether agent characteristics are associated with observed average diffusion patterns. Level 3 then asks whether the fit between a specific agent and a specific content topic matters after the first two layers are understood. Reconstructed network metrics are treated as diffusion-pattern descriptors, not ordinary ex-ante network predictors. This sequence supports the thesis claim that marketing diffusion is not a one-size-fits-all problem.
 
 ## Step-by-step workflow
 
@@ -3212,7 +3212,7 @@ How to read the output: use this file as a data audit trail. A source file shoul
 What this step does: Stage 4 creates three separate master files rather than one mixed `analysis_master.xlsx`.
 
 - Level 1 content master: {len(level1):,} article-agent diffusion cases. Data used: `final_results.xlsx`, S2 content features, S2 article metadata, and corrected diffusion layers. Primary DV: `log_reach = log1p(cascade_size)`, with duration, reshare, depth, and virality outcomes used as additional outcomes.
-- Level 2 agent/network master: {len(level2):,} agents. Data used: `agent_level_results.xlsx`, existing S3 `JobCategory`, prepared gender, job, and department attributes. Primary DV: `log_agent_cascade_size_mean = log1p(cascade_size_mean)`.
+- Level 2 agent-characteristic master: {len(level2):,} agents. Data used: `agent_level_results.xlsx`, existing S3 `JobCategory`, prepared gender, job, and department attributes. Primary DV: `log_agent_cascade_size_mean = log1p(cascade_size_mean)`.
 - Level 3 agent-topic matching master: {len(level3):,} agent-topic rows. Data used: `agent_topic_level_results.xlsx`, article-agent matching scores from `final_results.xlsx`, S2 content controls, and agent attributes. Primary DV: `log_agent_topic_cascade_size_mean = log1p(cascade_size_mean)`.
 
 Why this step matters: each analytical level has a different unit of observation. Level 1 is article-agent, Level 2 is agent, and Level 3 is agent-topic. Mixing them into one table would blur the meaning of a coefficient and increase leakage risk.
@@ -3233,19 +3233,19 @@ How to read the output: unmapped labels or mixed-language labels should be treat
 
 ### Step 4 - Assign variable roles before modeling
 
-What this step does: every major variable is assigned a role such as outcome, content predictor, agent attribute predictor, matching predictor, mechanism descriptor, control, or validation-only field.
+What this step does: every major variable is assigned a role such as outcome, content predictor, agent attribute predictor, matching predictor, diffusion-pattern descriptor, control, or validation-only field.
 
 Why this step matters: diffusion-derived variables can be tempting to use as predictors, but many of them are calculated from the same diffusion process as the dependent variables. Treating them as ordinary predictors can create post-treatment leakage. The role map keeps the analysis honest by specifying which variables can be used as predictors, which can be outcomes, and which should only be descriptive or validation fields.
 
 Output: `analysis(S4)/tables/variable_role_map.xlsx`.
 
-How to read the output: this file explains why, for example, `MatchScore_mean` belongs in Level 3 rather than Level 1, and why centrality is interpreted as a mechanism descriptor rather than a clean causal treatment.
+How to read the output: this file explains why, for example, `MatchScore_mean` belongs in Level 3 rather than Level 1, and why centrality is interpreted as a diffusion-pattern descriptor rather than a clean causal treatment.
 
 Thesis wording: describe these models as associational. Use words like "is associated with", "is related to", and "is consistent with" rather than causal wording such as "causes" or "affects" unless a causal identification strategy is added.
 
 ### Step 5 - Run Level 1 content analysis
 
-What this step does: Level 1 tests whether article content characteristics are associated with diffusion outcomes without adding agent-network or matching variables. Content topic, topic scores, `CosineSim`, `WordCount`, `HasImage`, and `NumImages` are joined by exact article `Title`. Main models use `TopContentCluster` as a categorical predictor and content metadata as controls.
+What this step does: Level 1 tests whether article content characteristics are associated with diffusion outcomes without adding agent-characteristic or matching variables. Content topic, topic scores, `CosineSim`, `WordCount`, `HasImage`, and `NumImages` are joined by exact article `Title`. Main models use `TopContentCluster` as a categorical predictor and content metadata as controls.
 
 Why this step matters: this is the content-only baseline. It answers whether articles with different content characteristics diffuse differently before asking whether agents or matching explain additional variation.
 
@@ -3259,23 +3259,23 @@ Interpretation: a positive `z_CosineSim` coefficient means title-content semanti
 
 Robustness: the pipeline adds {_model_count(level1_tables, "level1_topic_score_robustness")} five-topic-score models, {_model_count(level1_tables, "level1_topic_pca_robustness")} topic-PCA models, and {_model_count(level1_tables, "level1_distance_robustness_euclidean") + _model_count(level1_tables, "level1_distance_robustness_manhattan")} alternative-distance models.
 
-### Step 6 - Run Level 2 agent/network analysis
+### Step 6 - Run Level 2 agent-characteristic analysis
 
-What this step does: Level 2 tests whether agent role, agent attributes, and network position are associated with average diffusion capability. The unit is one row per agent. The core model uses `JobCategory`, `agent_gender`, and `log_article_count_per_agent`; additional mechanism blocks examine centrality, repeat exposure, and network composition.
+What this step does: Level 2 tests whether agent role and agent attributes are associated with average diffusion patterns. The unit is one row per agent. The core model uses `JobCategory`, `agent_gender`, and `log_article_count_per_agent`; additional descriptor blocks examine centrality, repeat exposure, and network composition as reconstructed diffusion-pattern descriptors.
 
-Why this step matters: even good content may diffuse differently depending on who shares it. Level 2 separates overall agent capability and network opportunity from the content-only story.
+Why this step matters: even good content may diffuse differently depending on who shares it. Level 2 separates agent-characteristic heterogeneity from the content-only story, while treating reconstructed network metrics as descriptions of observed diffusion patterns.
 
 Output: `analysis(S4)/tables/level2_agent_network_analysis.xlsx` and Level 2 figures in `analysis(S4)/figures/`.
 
-How to read the output: the main complete-case n is {_model_n(level2_tables, "level2_core")}. Role/gender coefficients describe group differences in average diffusion capability. Centrality and repeat-exposure results are mechanism associations because they are derived from observed network/diffusion structure.
+How to read the output: the main complete-case n is {_model_n(level2_tables, "level2_core")}. Role/gender coefficients describe group differences in average diffusion capability. Centrality and repeat-exposure results are descriptive diffusion-pattern associations because they are derived from observed network/diffusion structure.
 
 Role/gender model signal: {_top_term(level2_tables, "JobCategory", model_hint="level2_core")}
 
-Interpretation of role category: JobCategory is not statistically significant in the current Level 2 core model, so the thesis should report this as evidence that formal role category alone does not explain average diffusion capability. This is substantively useful because it shifts the Level 2 explanation toward network position and exposure rather than job labels.
+Interpretation of role category: JobCategory is not statistically significant in the current Level 2 core model, so the thesis should report this as evidence that formal role category alone does not explain average diffusion capability. This is substantively useful because it separates agent labels from diffusion-pattern descriptors such as reconstructed centrality and exposure.
 
-Centrality mechanism signal: {_top_term(level2_tables, "z_agent_deg_centrality_mean", model_hint="level2_mechanism_centrality", exact_term=True)}
+Centrality descriptor signal: {_top_term(level2_tables, "z_agent_deg_centrality_mean", model_hint="level2_descriptor_centrality", exact_term=True)}
 
-Thesis wording: say that more central agents are associated with stronger average diffusion, while noting that centrality is not randomly assigned and should not be interpreted as a causal treatment.
+Thesis wording: say that agents with stronger observed diffusion tend to occupy more central positions in the reconstructed diffusion network. Centrality should be framed as a diffusion-pattern descriptor, not as a leakage-free causal predictor.
 
 Robustness: the pipeline adds {_model_count(level2_tables, "level2_core_no_article_count")} core models without the article-count control.
 
@@ -3283,7 +3283,7 @@ Robustness: the pipeline adds {_model_count(level2_tables, "level2_core_no_artic
 
 What this step does: Level 3 tests whether content-agent fit is associated with diffusion for each agent-topic combination. The unit is one row per agent and English `TopContentCluster`. `MatchScore_mean` and `ProfessionContentMatch_mean` are aggregated from article-agent rows, but they are estimated in separate core models to avoid collinearity and interpretation problems.
 
-Why this step matters: this is the direct empirical test of the "one size does not fit all" thesis. It asks whether the same content category performs differently depending on the agent's topical/job fit and network position.
+Why this step matters: this is the direct empirical test of the "one size does not fit all" thesis. It asks whether the same content category performs differently depending on the agent's topical/job fit. Reconstructed centrality is used only in a supplementary descriptive moderation analysis.
 
 Output: `analysis(S4)/tables/level3_agent_topic_matching_analysis.xlsx` and Level 3 figures in `analysis(S4)/figures/`.
 
@@ -3295,11 +3295,11 @@ Key binary/proportion matching signal: {_top_term(level3_tables, "z_ProfessionCo
 
 Moderation signal: {_top_term(level3_tables, "z_MatchScore_mean:z_agent_deg_centrality_mean", model_hint="level3_matchscore_centrality_moderation", exact_term=True)}
 
-Interpretation: a positive matching coefficient means better content-agent fit is associated with stronger diffusion for that agent-topic combination. The moderation model asks whether agent network centrality changes the value of matching; it is reported only after Level 2 supports centrality relevance. {moderation_interpretation}
+Interpretation: a positive matching coefficient means better content-agent fit is associated with stronger diffusion for that agent-topic combination. The moderation model asks whether the matching-diffusion association differs across reconstructed centrality levels; it is reported as supplementary descriptive heterogeneity rather than as a causal moderation test. {moderation_interpretation}
 
 Sparse-cell note: {sparse_text}
 
-Thesis wording: this level supports the managerial implication that personalized content assignment may matter. Lower-centrality agents may need better content-topic fit to compensate for weaker network position, while high-centrality agents may diffuse content more broadly even when fit is weaker.
+Thesis wording: this level supports the managerial implication that personalized content assignment may matter. The centrality moderation result should be discussed only as descriptive heterogeneity across reconstructed diffusion-position groups.
 
 ### Step 8 - Generate tables, figures, validation files, and notebook
 
@@ -3317,7 +3317,7 @@ Stage 4 follows the three-level framework from the interim report. All topic lab
 
 ## Leakage control
 
-Diffusion-derived variables are treated as outcomes or mechanism descriptors, not ordinary leakage-free predictors. Level 1 excludes matching and agent/network variables. Level 2 excludes content-agent matching aggregates. Level 3 uses matching variables plus leakage-safe content/exposure controls, and does not use realized diffusion descriptors as ordinary controls.
+Diffusion-derived variables are treated as outcomes or diffusion-pattern descriptors, not ordinary leakage-free predictors. Level 1 excludes matching and agent-characteristic variables. Level 2 excludes content-agent matching aggregates. Level 3 uses matching variables plus leakage-safe content/exposure controls, and does not use realized diffusion descriptors as ordinary controls.
 
 ## Main interpretation by level
 
@@ -3331,17 +3331,17 @@ Key model signal: {_top_term(level1_tables, "z_CosineSim", exact_term=True)}
 
 Interpretation: a positive `z_CosineSim` coefficient means title-content semantic consistency is associated with higher diffusion; a negative coefficient would indicate that more semantic distance is associated with weaker diffusion. Standardized beta values are used to compare continuous predictors measured on different scales.
 
-### Level 2 Agent / Network
+### Level 2 Agent Characteristics
 
-Why calculated: Level 2 tests whether agent roles and network position are associated with overall diffusion capability.
+Why calculated: Level 2 tests whether agent roles and observable agent characteristics are associated with average diffusion patterns. Reconstructed network metrics describe the resulting diffusion structure rather than ex-ante network causes.
 
 Method: one row per agent. Primary DV: `log_agent_cascade_size_mean = log1p(cascade_size_mean)`. Controls: `JobCategory`, `agent_gender`, and `log_article_count_per_agent` in the core model. `article_count_per_agent` is calculated from `final_results.xlsx` and used as a stability/opportunity control. Main complete-case n: {_model_n(level2_tables, "level2_core")}.
 
 Role/gender model signal: {_top_term(level2_tables, "JobCategory", model_hint="level2_core")}
 
-Centrality mechanism signal: {_top_term(level2_tables, "z_agent_deg_centrality_mean", model_hint="level2_mechanism_centrality", exact_term=True)}
+Centrality descriptor signal: {_top_term(level2_tables, "z_agent_deg_centrality_mean", model_hint="level2_descriptor_centrality", exact_term=True)}
 
-Interpretation: role/gender coefficients describe group differences in average agent diffusion capability, while centrality and repeat-exposure blocks are mechanism associations. They are not interpreted as causal effects because they are derived from observed diffusion/network structure.
+Interpretation: role/gender coefficients describe group differences in average agent diffusion capability, while centrality and repeat-exposure blocks describe diffusion-pattern associations. They are not interpreted as causal effects because they are derived from observed diffusion/network structure.
 
 ### Level 3 Content-Agent Matching
 
@@ -3359,7 +3359,7 @@ Interpretation: a positive matching coefficient means better content-agent fit i
 
 ## Limitations
 
-The analysis is explanatory and associational. Standardized beta is useful for comparing continuous predictors, but categorical coefficients should be interpreted relative to their reference groups. Diffusion-derived descriptors are treated as outcomes or mechanism descriptors, not leakage-free causal predictors. Sparse-cell Level 3 evidence should be interpreted cautiously, especially for individual agent-topic pairs.
+The analysis is explanatory and associational. Standardized beta is useful for comparing continuous predictors, but categorical coefficients should be interpreted relative to their reference groups. Diffusion-derived descriptors are treated as outcomes or diffusion-pattern descriptors, not leakage-free causal predictors. Sparse-cell Level 3 evidence should be interpreted cautiously, especially for individual agent-topic pairs.
 """
     path.write_text(text, encoding="utf-8")
 
@@ -3369,7 +3369,7 @@ def write_notebook(path: Path) -> None:
     nb["cells"] = [
         nbf.v4.new_markdown_cell(
             "# Stage 4 Three-Level Analysis\n\n"
-            "This notebook regenerates Level 1 content, Level 2 agent/network, and Level 3 agent-topic matching outputs."
+            "This notebook regenerates Level 1 content, Level 2 agent-characteristic, and Level 3 agent-topic matching outputs."
         ),
         nbf.v4.new_code_cell(
             "from pathlib import Path\n"
