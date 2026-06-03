@@ -694,6 +694,15 @@ def test_level3_matching_models_are_separate():
             "JobCategory": [f"J{i % 3}" for i in range(n)],
             "agent_gender": [i % 2 for i in range(n)],
             "log_agent_topic_cascade_size_mean": [1.0 + (i % 10) * 0.1 for i in range(n)],
+            "depth_mean": [1 + i % 5 for i in range(n)],
+            "reshare_mean": [(i % 10) / 10 for i in range(n)],
+            "second_layer_width_avg": [i % 7 for i in range(n)],
+            "structural_virality_mean": [1.0 + (i % 8) * 0.1 for i in range(n)],
+            "duration_mean_of_means": [10 + i for i in range(n)],
+            "wiener_index_mean": [3 + (i % 9) * 0.3 for i in range(n)],
+            "centrality_mean": [(i % 12) / 100 for i in range(n)],
+            "agent_deg_centrality_mean": [(i % 15) / 100 for i in range(n)],
+            "avg_out_degree_centrality_mean": [(i % 18) / 100 for i in range(n)],
             "MatchScore_mean": [((i * 7) % 100) / 100 for i in range(n)],
             "ProfessionContentMatch_mean": [1.0 if i % 3 == 0 else 0.0 for i in range(n)],
             "log_agent_topic_article_n": [1.0 + (i % 5) * 0.1 for i in range(n)],
@@ -709,10 +718,34 @@ def test_level3_matching_models_are_separate():
 
     tables = run_level3_agent_topic_matching_analysis(df)
     formulas = " ".join(tables["model_summary"]["formula"].astype(str))
+    modeled_outcomes = set(tables["model_summary"]["outcome"])
 
     assert "level3_model_a_matchscore" in set(tables["model_summary"]["model"])
     assert "level3_model_b_profession_match" in set(tables["model_summary"]["model"])
     assert "MatchScore_mean + ProfessionContentMatch_mean" not in formulas
+    assert {
+        "depth_mean",
+        "reshare_mean",
+        "structural_virality_mean",
+        "wiener_index_mean",
+        "centrality_mean",
+        "agent_deg_centrality_mean",
+    }.issubset(modeled_outcomes)
+    assert "level3_matchscore_centrality_moderation" not in set(tables["model_summary"]["model"])
+    rhs_text = " ".join(
+        formula.split("~", 1)[1]
+        for formula in tables["model_summary"]["formula"].dropna().astype(str)
+        if "~" in formula
+    )
+    for forbidden_rhs in [
+        "agent_deg_centrality_mean",
+        "avg_out_degree_centrality_mean",
+        "centrality_mean",
+        "wiener_index_mean",
+        "structural_virality_mean",
+        "depth_mean",
+    ]:
+        assert forbidden_rhs not in rhs_text
     for model_name in [
         "level3_model_a_matchscore_weighted",
         "level3_model_b_profession_match_weighted",
@@ -735,6 +768,11 @@ def test_level1_analysis_includes_topic_and_distance_robustness():
             "any_reshare": [i % 2 for i in range(n)],
             "cascade_size": [1 + i % 20 for i in range(n)],
             "second_layer_width": [i % 8 for i in range(n)],
+            "depth": [1 + i % 4 for i in range(n)],
+            "wiener_index_winsorized": [5.0 + (i % 9) * 0.2 for i in range(n)],
+            "centrality": [(i % 11) / 100 for i in range(n)],
+            "agent_deg_centrality": [(i % 13) / 100 for i in range(n)],
+            "avg_out_degree_centrality": [(i % 17) / 100 for i in range(n)],
             "CosineSim": [0.25 + (i % 20) * 0.02 for i in range(n)],
             "EuclideanDist": [5 + i % 30 for i in range(n)],
             "ManhattanDist": [8 + i % 35 for i in range(n)],
@@ -754,6 +792,30 @@ def test_level1_analysis_includes_topic_and_distance_robustness():
     assert "level1_topic_pca_robustness" in models
     assert "level1_distance_robustness_euclidean" in models
     assert "level1_distance_robustness_manhattan" in models
+    modeled_outcomes = set(tables["model_summary"]["outcome"])
+    assert {
+        "depth",
+        "structural_virality_winsorized",
+        "wiener_index_winsorized",
+    }.issubset(modeled_outcomes)
+    assert {
+        "centrality",
+        "agent_deg_centrality",
+        "avg_out_degree_centrality",
+    }.isdisjoint(modeled_outcomes)
+    rhs_text = " ".join(
+        formula.split("~", 1)[1]
+        for formula in tables["model_summary"]["formula"].dropna().astype(str)
+        if "~" in formula
+    )
+    for forbidden_rhs in [
+        "wiener_index",
+        "centrality",
+        "agent_deg_centrality",
+        "avg_out_degree_centrality",
+        "structural_virality",
+    ]:
+        assert forbidden_rhs not in rhs_text
     assert "topic_score_robustness_coefficients" in tables
     assert "distance_robustness_coefficients" in tables
 
@@ -799,6 +861,8 @@ def test_level2_analysis_includes_no_article_count_robustness():
             "depth_mean": [1 + i % 5 for i in range(n)],
             "second_layer_width_avg": [i % 7 for i in range(n)],
             "structural_virality_mean": [1 + (i % 8) * 0.1 for i in range(n)],
+            "wiener_index_mean": [5 + (i % 9) * 0.4 for i in range(n)],
+            "centrality_mean": [(i % 11) / 100 for i in range(n)],
             "duration_mean_of_means": [10 + i for i in range(n)],
             "article_count_per_agent": [1 + i % 12 for i in range(n)],
             "log_article_count_per_agent": [0.5 + (i % 12) * 0.1 for i in range(n)],
@@ -813,6 +877,32 @@ def test_level2_analysis_includes_no_article_count_robustness():
     tables = run_level2_agent_network_analysis(df)
 
     assert "level2_core_no_article_count" in set(tables["model_summary"]["model"])
+    modeled_outcomes = set(tables["model_summary"]["outcome"])
+    assert {
+        "agent_deg_centrality_mean",
+        "avg_out_degree_centrality_mean",
+        "centrality_mean",
+        "wiener_index_mean",
+    }.issubset(modeled_outcomes)
+    assert not any(
+        str(model).startswith("level2_descriptor")
+        for model in tables["model_summary"]["model"]
+    )
+    rhs_text = " ".join(
+        formula.split("~", 1)[1]
+        for formula in tables["model_summary"]["formula"].dropna().astype(str)
+        if "~" in formula
+    )
+    for forbidden_rhs in [
+        "agent_deg_centrality_mean",
+        "avg_out_degree_centrality_mean",
+        "centrality_mean",
+        "wiener_index_mean",
+        "repeat_exposure_1st_nodes_pct",
+        "repeat_exposure_2nd_nodes_pct",
+        "gender_assortativity_mean",
+    ]:
+        assert forbidden_rhs not in rhs_text
 
 
 def test_variable_role_map_covers_three_level_model_variables():
@@ -833,6 +923,25 @@ def test_variable_role_map_covers_three_level_model_variables():
     }
 
     assert expected.issubset(variables)
+    network_rows = role_map[
+        role_map["variable"].isin(
+            [
+                "agent_deg_centrality_mean",
+                "avg_out_degree_centrality_mean",
+                "centrality_mean",
+                "wiener_index_mean",
+            ]
+        )
+    ]
+    assert not network_rows.empty
+    assert network_rows["allowed_as_predictor"].eq(False).all()
+    assert network_rows["allowed_as_outcome"].eq(True).all()
+    assert network_rows["role"].str.contains("outcome").all()
+    level1_centrality_rows = role_map[
+        (role_map["level"] == "Level 1")
+        & role_map["variable"].isin(["centrality", "agent_deg_centrality", "avg_out_degree_centrality"])
+    ]
+    assert level1_centrality_rows.empty
     assert len(role_map) >= 35
 
 
@@ -870,11 +979,11 @@ def test_findings_summary_contains_thesis_method_and_interpretation_blocks(tmp_p
                 "p_value": 0.01,
             },
             {
-                "model": "level2_descriptor_centrality",
-                "outcome": "log_agent_cascade_size_mean",
-                "term": "z_agent_deg_centrality_mean",
+                "model": "level2_core",
+                "outcome": "agent_deg_centrality_mean",
+                "term": "C(JobCategory)[T.Design]",
                 "coef": 0.2,
-                "standardized_beta": 0.2,
+                "standardized_beta": None,
                 "p_value": 0.02,
             },
             {
@@ -891,14 +1000,6 @@ def test_findings_summary_contains_thesis_method_and_interpretation_blocks(tmp_p
                 "term": "z_ProfessionContentMatch_mean",
                 "coef": 0.4,
                 "standardized_beta": 0.4,
-                "p_value": 0.04,
-            },
-            {
-                "model": "level3_matchscore_centrality_moderation",
-                "outcome": "log_agent_topic_cascade_size_mean",
-                "term": "z_MatchScore_mean:z_agent_deg_centrality_mean",
-                "coef": -0.1,
-                "standardized_beta": -0.1,
                 "p_value": 0.04,
             },
         ]
@@ -945,12 +1046,15 @@ def test_findings_summary_contains_thesis_method_and_interpretation_blocks(tmp_p
         "Standardized beta",
         "Leakage control",
         "Complete-case",
-        "Sparse-cell",
-        "JobCategory is not statistically significant",
-        "matching-diffusion association is weaker",
-        "Step-by-step workflow",
-        "Step 1 - Source readiness precheck",
-        "Step 2 - Build separate level-specific master files",
+            "Sparse-cell",
+            "JobCategory is not statistically significant",
+            "supplementary dependent variables",
+            "different outcome set",
+            "unit of analysis",
+            "same metric should not be forced into every level",
+            "Step-by-step workflow",
+            "Step 1 - Source readiness precheck",
+            "Step 2 - Build separate level-specific master files",
         "Step 3 - Standardize topic labels",
         "Step 4 - Assign variable roles before modeling",
         "Step 5 - Run Level 1 content analysis",

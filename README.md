@@ -104,7 +104,7 @@ Purpose:
 
 - Build diffusion cascades from WeChat sharing/reading paths.
 - Generate article-agent, agent-level, and agent-topic-level diffusion metrics.
-- Prepare agent attributes and network descriptors for Stage 4.
+- Prepare agent attributes and diffusion outcome dimensions for Stage 4.
 
 Key files:
 
@@ -131,7 +131,7 @@ Stage 4 is the current final analysis layer. It intentionally separates the proj
 
 ### Level 1: Content
 
-Question: Are content characteristics associated with diffusion outcomes?
+Question: Are content characteristics associated with article-agent diffusion outcomes?
 
 Main file:
 
@@ -148,6 +148,10 @@ Main outcome:
 
 - `log_reach = log1p(cascade_size)`
 
+Supplementary outcomes:
+
+- article-agent width, depth, reshare, duration, structural virality, and Wiener index
+
 Main predictors/controls:
 
 - `TopContentCluster`
@@ -159,7 +163,7 @@ Main predictors/controls:
 
 ### Level 2: Agent / Network
 
-Question: Are agent role, attributes, and network position associated with average diffusion capability?
+Question: Are agent role and attributes associated with agent-level diffusion outcome dimensions?
 
 Main file:
 
@@ -176,16 +180,19 @@ Main outcome:
 
 - `log_agent_cascade_size_mean = log1p(cascade_size_mean)`
 
+Supplementary outcomes:
+
+- agent-level mean depth, reshare, structural virality, Wiener index, centrality, repeat exposure, and network-composition measures
+
 Main predictors/controls:
 
 - `JobCategory`
 - `agent_gender`
 - `log_article_count_per_agent`
-- centrality and repeat-exposure descriptors as mechanism variables
 
 ### Level 3: Content-Agent Matching
 
-Question: Does content-agent fit explain why one content strategy does not work equally well for all agents?
+Question: Does content-agent fit explain why one content strategy does not work equally well for all agent-topic combinations?
 
 Main file:
 
@@ -202,14 +209,14 @@ Main outcome:
 
 - `log_agent_topic_cascade_size_mean = log1p(cascade_size_mean)`
 
+Supplementary outcomes:
+
+- agent-topic mean depth, reshare, structural virality, Wiener index, centrality, and related cascade-shape outcomes
+
 Main matching predictors:
 
 - `MatchScore_mean`
 - `ProfessionContentMatch_mean`
-
-Key moderation model:
-
-- `MatchScore_mean x agent_deg_centrality_mean`
 
 ## Stage 4 Outputs
 
@@ -225,7 +232,7 @@ Key generated files:
 | `analysis(S4)/tables/variable_role_map.xlsx` | Variable role map used to prevent leakage. |
 | `analysis(S4)/tables/level1_content_analysis.xlsx` | Level 1 regression/group-test outputs. |
 | `analysis(S4)/tables/level2_agent_network_analysis.xlsx` | Level 2 regression/group-test outputs. |
-| `analysis(S4)/tables/level3_agent_topic_matching_analysis.xlsx` | Level 3 matching and moderation outputs. |
+| `analysis(S4)/tables/level3_agent_topic_matching_analysis.xlsx` | Level 3 matching outputs across primary and supplementary outcomes. |
 | `analysis(S4)/tables/three_level_validation_report.json` | Row-count and validation summary. |
 | `analysis(S4)/figures/*.png` | Thesis-facing figures for Levels 1-3. |
 
@@ -235,7 +242,6 @@ Important figures:
 - `analysis(S4)/figures/level1_cosinesim_decile_trends.png`
 - `analysis(S4)/figures/level2_network_metric_correlations.png`
 - `analysis(S4)/figures/level3_agent_topic_matchscore_trends.png`
-- `analysis(S4)/figures/level3_matchscore_centrality_moderation.png`
 
 ## Reproducing Stage 4
 
@@ -262,7 +268,9 @@ Run them from the repository root:
 ## Interpretation Notes
 
 - The project is explanatory and associational, not causal.
-- Stage 4 avoids using diffusion-derived descriptors as ordinary leakage-free predictors.
+- Stage 4 treats diffusion-derived cascade and network measures as primary or supplementary dependent variables, not ordinary leakage-free predictors.
+- Different levels use different supplementary outcomes because Level 1 is article-agent, Level 2 is agent-level, and Level 3 is agent-topic.
+- Level 1 excludes centrality-class network-position outcomes; centrality is modeled only at Level 2 and Level 3 where agent or agent-topic aggregation gives it a coherent interpretation.
 - `analysis_master.xlsx` is intentionally not used in the final Stage 4 framework.
 - Topic labels are standardized to English before Stage 4 modeling.
 - Complete-case model sample sizes can be smaller than master-file row counts.

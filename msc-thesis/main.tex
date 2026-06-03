@@ -1,0 +1,33 @@
+\documentclass[12pt,a4paper]{report}
+
+\input{preamble}
+
+\begin{document}
+
+\title{Your Thesis Title Here}
+\author{Yan W}
+\date{\today}
+\maketitle
+
+\pagenumbering{roman}
+\tableofcontents
+\listoffigures
+\listoftables
+
+\clearpage
+\pagenumbering{arabic}
+
+\include{chapters/01_introduction}
+\include{chapters/02_literature_review}
+\include{chapters/03_methodology}
+\include{chapters/04_data}
+\include{chapters/05_results}
+\include{chapters/06_discussion}
+\include{chapters/07_conclusion}
+
+\printbibliography
+
+\appendix
+\include{appendix/appendix_a}
+
+\end{document}
