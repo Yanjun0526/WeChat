@@ -979,6 +979,14 @@ def test_findings_summary_contains_thesis_method_and_interpretation_blocks(tmp_p
                 "p_value": 0.01,
             },
             {
+                "model": "level1_topic_pca_robustness",
+                "outcome": "log_reach",
+                "term": "z_CosineSim",
+                "coef": 0.9,
+                "standardized_beta": 0.9,
+                "p_value": 0.001,
+            },
+            {
                 "model": "level2_core",
                 "outcome": "agent_deg_centrality_mean",
                 "term": "C(JobCategory)[T.Design]",
@@ -1047,7 +1055,8 @@ def test_findings_summary_contains_thesis_method_and_interpretation_blocks(tmp_p
         "Leakage control",
         "Complete-case",
             "Sparse-cell",
-            "JobCategory is not statistically significant",
+            "If a category with only one agent is used as the reference",
+            "should not be read as clean evidence that role is unrelated",
             "supplementary dependent variables",
             "different outcome set",
             "unit of analysis",
@@ -1067,6 +1076,8 @@ def test_findings_summary_contains_thesis_method_and_interpretation_blocks(tmp_p
         "Thesis wording",
     ]:
         assert expected in text
+    assert "Key model signal: `z_CosineSim` on `log_reach`: coef=0.100" in text
+    assert "Key model signal: `z_CosineSim` on `log_reach`: coef=0.900" not in text
 
 
 def test_create_level_figures_generates_planned_figure_set(tmp_path, monkeypatch):

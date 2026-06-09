@@ -2526,13 +2526,21 @@ def run_level2_agent_network_analysis(master: pd.DataFrame) -> dict[str, pd.Data
             df[column] = df[column].astype(str)
     summaries: list[dict] = []
     coeffs: list[pd.DataFrame] = []
-    core_terms = [term for term in ["C(JobCategory)", "C(agent_gender)", "z_log_article_count_per_agent"] if term.startswith("C(") or term in df.columns]
-    core_no_count_terms = [term for term in ["C(JobCategory)", "C(agent_gender)"] if term.startswith("C(") or term in df.columns]
+    model_df = df.copy()
+    jobcategory_term = "C(JobCategory)"
+    if "JobCategory" in model_df.columns:
+        job_categories = set(model_df["JobCategory"].dropna().astype(str))
+        if "3" in job_categories:
+            jobcategory_term = "C(JobCategory, Treatment(reference='3'))"
+            if "0" in job_categories:
+                model_df = model_df[model_df["JobCategory"].ne("0")].copy()
+    core_terms = [term for term in [jobcategory_term, "C(agent_gender)", "z_log_article_count_per_agent"] if term.startswith("C(") or term in model_df.columns]
+    core_no_count_terms = [term for term in [jobcategory_term, "C(agent_gender)"] if term.startswith("C(") or term in model_df.columns]
     outcomes = [outcome for outcome in LEVEL2_OUTCOMES if outcome in df.columns]
     for outcome in outcomes:
-        if outcome not in df.columns:
+        if outcome not in model_df.columns:
             continue
-        result = _fit_formula(df, f"{outcome} ~ {' + '.join(core_terms)}", outcome, family="ols", model_name="level2_core")
+        result = _fit_formula(model_df, f"{outcome} ~ {' + '.join(core_terms)}", outcome, family="ols", model_name="level2_core")
         if result:
             summary, coeff = result
             summary["formula"] = f"{outcome} ~ {' + '.join(core_terms)}"
@@ -2540,11 +2548,11 @@ def run_level2_agent_network_analysis(master: pd.DataFrame) -> dict[str, pd.Data
             coeffs.append(coeff)
 
     for outcome in outcomes:
-        if outcome not in df.columns or not core_no_count_terms:
+        if outcome not in model_df.columns or not core_no_count_terms:
             continue
         formula = f"{outcome} ~ {' + '.join(core_no_count_terms)}"
         result = _fit_formula(
-            df,
+            model_df,
             formula,
             outcome,
             family="ols",
@@ -3029,6 +3037,7 @@ def write_findings_summary(
         term_hint: str,
         *,
         model_hint: str | None = None,
+        outcome_hint: str | None = None,
         exact_term: bool = False,
         alpha: float = 0.05,
     ) -> str:
@@ -3038,6 +3047,8 @@ def write_findings_summary(
         rows = coeff.copy()
         if model_hint and "model" in rows.columns:
             rows = rows[rows["model"].astype(str).eq(model_hint)]
+        if outcome_hint and "outcome" in rows.columns:
+            rows = rows[rows["outcome"].astype(str).eq(outcome_hint)]
         if exact_term:
             rows = rows[rows["term"].astype(str).eq(term_hint)]
         else:
@@ -3052,6 +3063,15 @@ def write_findings_summary(
         if pd.notna(p_value) and p_value >= alpha:
             return f"No coefficient in this block is below p<{alpha:g}; strongest observed term is {signal}"
         return signal
+
+    def _model_formula(tables: dict[str, pd.DataFrame], model_name: str) -> str:
+        summary = tables.get("model_summary", pd.DataFrame())
+        if summary.empty or "model" not in summary.columns or "formula" not in summary.columns:
+            return ""
+        rows = summary[summary["model"].astype(str).eq(model_name)]
+        if rows.empty:
+            return ""
+        return " ".join(rows["formula"].dropna().astype(str).unique().tolist())
 
     def _model_count(tables: dict[str, pd.DataFrame], model_name: str) -> int:
         summary = tables.get("model_summary", pd.DataFrame())
@@ -3073,15 +3093,117 @@ def write_findings_summary(
             return f"{n_values[0]:,}"
         return f"{min(n_values):,}-{max(n_values):,}"
 
+    def _level2_reference_note() -> str:
+        distribution = level2_tables.get("jobcategory_distribution", pd.DataFrame())
+        distribution_text = ""
+        if not distribution.empty and {"JobCategory", "agents_n"}.issubset(distribution.columns):
+            pieces = []
+            for _, dist_row in distribution.iterrows():
+                category = dist_row.get("JobCategory")
+                count = dist_row.get("agents_n")
+                if pd.notna(category) and pd.notna(count):
+                    pieces.append(f"{category}={int(count)}")
+            if pieces:
+                distribution_text = f" The observed JobCategory distribution is {', '.join(pieces)}."
+        formula = _model_formula(level2_tables, "level2_core")
+        if "Treatment(reference='3')" in formula:
+            return (
+                f"{distribution_text} The fitted core models use JobCategory=3 (Field Sales) as the reference category; "
+                "when JobCategory=0 (Unknown) is present as a single-agent category, it is excluded from the fitted "
+                "role models rather than used as the baseline. Earlier outputs that used Unknown as the reference "
+                "should therefore not be read as clean evidence that role is unrelated to diffusion outcomes."
+            )
+        return (
+            f"{distribution_text} If a category with only one agent is used as the reference, role coefficients "
+            "should be treated as weakly identified and should not be read as clean evidence that role is unrelated "
+            "to diffusion outcomes."
+        )
+
     sparse = level3_tables.get("sparse_cell_diagnostics", pd.DataFrame())
     if sparse.empty:
         sparse_text = "Sparse-cell diagnostics were not available."
     else:
         row = sparse.iloc[0]
+        sparse_summary = level3_tables.get("sparse_sensitivity_summary", pd.DataFrame())
+        sparse_models = set(sparse_summary.get("model", pd.Series(dtype=str)).dropna().astype(str))
+        has_n_ge_10 = any(model.endswith("_n_ge_10") for model in sparse_models)
+        has_n_ge_30 = any(model.endswith("_n_ge_30") for model in sparse_models)
+        pairs_n_ge_30 = int(row["pairs_n_ge_30"])
+        sparse_model_text = ""
+        if has_n_ge_10 and not has_n_ge_30 and pairs_n_ge_30 < 50:
+            sparse_model_text = (
+                " Sparse-cell sensitivity regressions are reported for n>=10; the n>=30 subset is retained as a "
+                "diagnostic count because it falls below the pipeline's 50-row minimum fitting rule."
+            )
+        elif has_n_ge_10 and has_n_ge_30:
+            sparse_model_text = " Sparse-cell sensitivity regressions are reported for both n>=10 and n>=30 subsets."
         sparse_text = (
             f"{int(row['pairs_n_ge_10'])} of {int(row['rows'])} agent-topic pairs have n>=10; "
-            f"{int(row['pairs_n_ge_30'])} have n>=30."
+            f"{pairs_n_ge_30} have n>=30.{sparse_model_text}"
         )
+
+    level1_main_cosine = _top_term(
+        level1_tables,
+        "z_CosineSim",
+        model_hint="level1_content_main",
+        outcome_hint="log_reach",
+        exact_term=True,
+    )
+    level1_pca_cosine = _top_term(
+        level1_tables,
+        "z_CosineSim",
+        model_hint="level1_topic_pca_robustness",
+        outcome_hint="log_reach",
+        exact_term=True,
+    )
+    level2_role_reach_signal = _top_term(
+        level2_tables,
+        "JobCategory",
+        model_hint="level2_core",
+        outcome_hint="log_agent_cascade_size_mean",
+    )
+    level2_role_centrality_signal = _top_term(
+        level2_tables,
+        "JobCategory",
+        model_hint="level2_core",
+        outcome_hint="centrality_mean",
+    )
+    level3_match_reach_signal = _top_term(
+        level3_tables,
+        "z_MatchScore_mean",
+        model_hint="level3_model_a_matchscore",
+        outcome_hint="log_agent_topic_cascade_size_mean",
+        exact_term=True,
+    )
+    level3_profession_reach_signal = _top_term(
+        level3_tables,
+        "z_ProfessionContentMatch_mean",
+        model_hint="level3_model_b_profession_match",
+        outcome_hint="log_agent_topic_cascade_size_mean",
+        exact_term=True,
+    )
+    level3_match_centrality_signal = _top_term(
+        level3_tables,
+        "z_MatchScore_mean",
+        model_hint="level3_model_a_matchscore",
+        outcome_hint="centrality_mean",
+        exact_term=True,
+    )
+    level3_profession_centrality_signal = _top_term(
+        level3_tables,
+        "z_ProfessionContentMatch_mean",
+        model_hint="level3_model_b_profession_match",
+        outcome_hint="centrality_mean",
+        exact_term=True,
+    )
+    level3_match_agent_degree_signal = _top_term(
+        level3_tables,
+        "z_MatchScore_mean",
+        model_hint="level3_model_a_matchscore",
+        outcome_hint="agent_deg_centrality_mean",
+        exact_term=True,
+    )
+    level2_reference_note = _level2_reference_note()
 
     text = f"""# Stage 4 Findings Summary
 
@@ -3153,11 +3275,11 @@ Output: `analysis(S4)/tables/level1_content_analysis.xlsx` and Level 1 figures i
 
 How to read the output: the main complete-case n is {_model_n(level1_tables, "level1_content_main")}. Continuous predictors are standardized, so Standardized beta values can be compared across continuous predictors. Categorical topic coefficients are interpreted relative to the reference topic. The Level 1 supplementary outcomes are article-agent case outcomes because this level asks what content is associated with in a specific agent's observed cascade.
 
-Key model signal: {_top_term(level1_tables, "z_CosineSim", exact_term=True)}
+Key model signal: {level1_main_cosine}
 
 Interpretation: a positive `z_CosineSim` coefficient means title-content semantic consistency is associated with higher diffusion. A negative coefficient would mean semantic distance is associated with weaker diffusion. In thesis wording, this supports the idea that content quality/consistency matters, but it does not by itself prove causality.
 
-Robustness: the pipeline adds {_model_count(level1_tables, "level1_topic_score_robustness")} five-topic-score models, {_model_count(level1_tables, "level1_topic_pca_robustness")} topic-PCA models, and {_model_count(level1_tables, "level1_distance_robustness_euclidean") + _model_count(level1_tables, "level1_distance_robustness_manhattan")} alternative-distance models.
+Robustness: the pipeline adds {_model_count(level1_tables, "level1_topic_score_robustness")} five-topic-score models, {_model_count(level1_tables, "level1_topic_pca_robustness")} topic-PCA models, and {_model_count(level1_tables, "level1_distance_robustness_euclidean") + _model_count(level1_tables, "level1_distance_robustness_manhattan")} alternative-distance models. The PCA robustness signal for `z_CosineSim` on `log_reach` is: {level1_pca_cosine} This robustness estimate should not be reported as the Level 1 main coefficient.
 
 ### Step 6 - Run Level 2 agent-characteristic analysis
 
@@ -3167,13 +3289,13 @@ Why this step matters: even good content may diffuse differently depending on wh
 
 Output: `analysis(S4)/tables/level2_agent_network_analysis.xlsx` and Level 2 figures in `analysis(S4)/figures/`.
 
-How to read the output: the main complete-case n is {_model_n(level2_tables, "level2_core")}. Role/gender coefficients describe group differences across agent-level outcome dimensions. The different outcome set appears here because Level 2 summarizes each agent's average diffusion pattern, not a single article-agent case.
+How to read the output: the fitted core-model complete-case n is {_model_n(level2_tables, "level2_core")}. Role/gender coefficients describe group differences across agent-level outcome dimensions. The different outcome set appears here because Level 2 summarizes each agent's average diffusion pattern, not a single article-agent case.{level2_reference_note}
 
-Role/gender model signal: {_top_term(level2_tables, "JobCategory", model_hint="level2_core")}
+Role/gender reach signal: {level2_role_reach_signal}
 
-Interpretation of role category: JobCategory is not statistically significant for every outcome dimension in the current Level 2 core models, so the thesis should report role-category evidence outcome by outcome rather than making one global claim. This is substantively useful because it separates agent labels from diffusion effectiveness dimensions such as reach, cascade shape, reconstructed centrality, and exposure.
+Interpretation of role category: JobCategory evidence should be reported outcome by outcome rather than as one global role effect. With Field Sales as the reference category, some contrasts are identifiable and statistically meaningful, while others remain weak or non-significant. This is substantively useful because it separates agent labels from diffusion effectiveness dimensions such as reach, cascade shape, reconstructed centrality, and exposure.
 
-Supplementary network-position outcome signal: {_top_term(level2_tables, "JobCategory", model_hint="level2_core")}
+Supplementary network-position outcome signal: {level2_role_centrality_signal}
 
 Thesis wording: say that agent attributes are tested against multiple observed diffusion dimensions. Centrality, Wiener index, depth, and structural virality should be framed as supplementary dependent variables derived from observed cascades, not as leakage-free causal predictors.
 
@@ -3189,11 +3311,13 @@ Output: `analysis(S4)/tables/level3_agent_topic_matching_analysis.xlsx` and Leve
 
 How to read the output: the main complete-case n is {_model_n(level3_tables, "level3_model_a_matchscore")}. `MatchScore_mean` captures continuous content-agent fit. `ProfessionContentMatch_mean` captures the share or intensity of profession-content match. Weighted models use `agent_topic_article_n` as precision/exposure weights, and sparse-cell sensitivity models check whether findings depend on very small agent-topic cells.
 
-Key continuous matching signal: {_top_term(level3_tables, "z_MatchScore_mean", model_hint="level3_model_a_matchscore", exact_term=True)}
+Key continuous matching reach signal: {level3_match_reach_signal}
 
-Key binary/proportion matching signal: {_top_term(level3_tables, "z_ProfessionContentMatch_mean", model_hint="level3_model_b_profession_match", exact_term=True)}
+Key binary/proportion matching reach signal: {level3_profession_reach_signal}
 
-Interpretation: a positive matching coefficient means better content-agent fit is associated with stronger diffusion for that agent-topic combination. Matching coefficients should be read separately for reach, cascade-shape outcomes, and reconstructed network-position outcomes.
+Network-position matching signal: {level3_match_centrality_signal} {level3_profession_centrality_signal} For agent degree centrality, the continuous matching signal is: {level3_match_agent_degree_signal}
+
+Interpretation: matching coefficients should be read separately for reach, cascade-shape outcomes, and reconstructed network-position outcomes. Positive matching coefficients on reach and cascade-shape outcomes indicate that better content-agent fit is associated with broader or deeper diffusion for that agent-topic combination. Negative matching coefficients on centrality-class outcomes should not be collapsed into a general negative diffusion result; they indicate a different network-position dimension of the observed cascades.
 
 Sparse-cell note: {sparse_text}
 
@@ -3225,7 +3349,7 @@ Why calculated: Level 1 tests whether content characteristics are associated wit
 
 Method: content topic, topic scores, `CosineSim`, `WordCount`, `HasImage`, and `NumImages` are joined by exact article `Title`. Main models use `TopContentCluster` as a categorical predictor and content metadata as controls. Controls: `CosineSim`, `WordCount`, `HasImage`, and `NumImages`; alternative distance controls are used only in robustness checks. The six topic-score columns are not entered together with topic dummies in the main model; they are used only in robustness specifications. Main complete-case n: {_model_n(level1_tables, "level1_content_main")}. Supplementary dependent variables are limited to article-agent reach, width, depth, reshare, duration, structural virality, and Wiener-index measures because this level's unit of analysis is one article shared by one agent.
 
-Key model signal: {_top_term(level1_tables, "z_CosineSim", exact_term=True)}
+Key model signal: {level1_main_cosine}
 
 Interpretation: a positive `z_CosineSim` coefficient means title-content semantic consistency is associated with higher diffusion; a negative coefficient would indicate that more semantic distance is associated with weaker diffusion. Standardized beta values are used to compare continuous predictors measured on different scales.
 
@@ -3235,9 +3359,9 @@ Why calculated: Level 2 tests whether agent roles and observable agent character
 
 Method: one row per agent. Primary DV: `log_agent_cascade_size_mean = log1p(cascade_size_mean)`. Controls: `JobCategory`, `agent_gender`, and `log_article_count_per_agent` in the core model. `article_count_per_agent` is calculated from `final_results.xlsx` and used as a stability/opportunity control. Main complete-case n: {_model_n(level2_tables, "level2_core")}. Supplementary dependent variables include agent-level mean depth, reshare, structural virality, Wiener index, centrality, repeat exposure, and network composition.
 
-Role/gender model signal: {_top_term(level2_tables, "JobCategory", model_hint="level2_core")}
+Role/gender reach signal: {level2_role_reach_signal}
 
-Supplementary network-position outcome signal: {_top_term(level2_tables, "JobCategory", model_hint="level2_core")}
+Supplementary network-position outcome signal: {level2_role_centrality_signal}
 
 Interpretation: role/gender coefficients describe group differences across agent-level diffusion outcome dimensions. Centrality, repeat exposure, structural virality, and Wiener index are not interpreted as causal predictors because they are derived from observed diffusion/network structure.
 
@@ -3247,11 +3371,13 @@ Why calculated: Level 3 directly tests the thesis claim that one content strateg
 
 Method: one row per agent and English `TopContentCluster`. `MatchScore_mean` and `ProfessionContentMatch_mean` are aggregated from article-agent rows, but they are estimated in separate core models to avoid collinearity and interpretation problems. Controls: `TopContentCluster`, `JobCategory`, `agent_gender`, `log_agent_topic_article_n`, `WordCount_mean`, `HasImage_share`, `NumImages_mean`, and `CosineSim_mean`. Main complete-case n: {_model_n(level3_tables, "level3_model_a_matchscore")}. Supplementary dependent variables use agent-topic averages because this level asks how a specific agent-topic pairing performs.
 
-Key continuous matching signal: {_top_term(level3_tables, "z_MatchScore_mean", model_hint="level3_model_a_matchscore", exact_term=True)}
+Key continuous matching reach signal: {level3_match_reach_signal}
 
-Key binary/proportion matching signal: {_top_term(level3_tables, "z_ProfessionContentMatch_mean", model_hint="level3_model_b_profession_match", exact_term=True)}
+Key binary/proportion matching reach signal: {level3_profession_reach_signal}
 
-Interpretation: a positive matching coefficient means better content-agent fit is associated with stronger diffusion for that agent-topic combination. Matching should be interpreted outcome by outcome because reach, cascade shape, and reconstructed network-position measures capture different dimensions of diffusion effectiveness.
+Network-position matching signal: {level3_match_centrality_signal} {level3_profession_centrality_signal} For agent degree centrality, the continuous matching signal is: {level3_match_agent_degree_signal}
+
+Interpretation: matching should be interpreted outcome by outcome because reach, cascade shape, and reconstructed network-position measures capture different dimensions of diffusion effectiveness.
 
 ## Limitations
 
