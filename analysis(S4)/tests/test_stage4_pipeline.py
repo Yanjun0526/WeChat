@@ -820,6 +820,42 @@ def test_level1_analysis_includes_topic_and_distance_robustness():
     assert "distance_robustness_coefficients" in tables
 
 
+def test_level1_content_main_uses_home_design_reference_topic():
+    n = 96
+    topics = [
+        "Home Design & Decoration",
+        "Brand & Marketing",
+        "Events & Promotions",
+        "Real Estate & Architecture",
+    ]
+    df = pd.DataFrame(
+        {
+            "agent_name": [f"a{i % 12}" for i in range(n)],
+            "article_title": [f"story{i}" for i in range(n)],
+            "TopContentCluster": [topics[i % len(topics)] for i in range(n)],
+            "log_reach": [1.0 + (i % 15) * 0.1 for i in range(n)],
+            "CosineSim": [0.25 + (i % 20) * 0.02 for i in range(n)],
+            "WordCount": [100 + i for i in range(n)],
+            "HasImage": [i % 2 for i in range(n)],
+            "NumImages": [i % 5 for i in range(n)],
+        }
+    )
+
+    tables = run_level1_content_analysis(df)
+    main_summary = tables["model_summary"][
+        (tables["model_summary"]["model"] == "level1_content_main")
+        & (tables["model_summary"]["outcome"] == "log_reach")
+    ].iloc[0]
+    main_terms = tables["coefficients"][
+        (tables["coefficients"]["model"] == "level1_content_main")
+        & (tables["coefficients"]["outcome"] == "log_reach")
+    ]["term"].astype(str)
+
+    assert "Treatment(reference='Home Design & Decoration')" in main_summary["formula"]
+    assert not main_terms.str.contains(r"\[T\.Home Design & Decoration\]", regex=True).any()
+    assert main_terms.str.contains(r"\[T\.Brand & Marketing\]", regex=True).any()
+
+
 def test_level1_analysis_includes_agent_and_article_clustered_se():
     n = 96
     df = pd.DataFrame(

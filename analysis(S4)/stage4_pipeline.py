@@ -59,6 +59,8 @@ TOPIC_ZH_TO_EN = {
 }
 
 CANONICAL_TOPICS = tuple(TOPIC_ZH_TO_EN.values())
+LEVEL1_TOPIC_REFERENCE = "Home Design & Decoration"
+LEVEL1_TOPIC_TERM = f"C(TopContentCluster, Treatment(reference={LEVEL1_TOPIC_REFERENCE!r}))"
 
 TOPIC_SCORE_COLUMN_MAP = {
     "家居设计与装修(Content)": "topic_home_design_decoration",
@@ -2366,7 +2368,7 @@ def run_level1_content_analysis(master: pd.DataFrame) -> dict[str, pd.DataFrame]
     clustered_coeffs: list[pd.DataFrame] = []
     base_terms = [
         term
-        for term in ["C(TopContentCluster)", "z_CosineSim", "z_WordCount", "HasImage", "z_NumImages"]
+        for term in [LEVEL1_TOPIC_TERM, "z_CosineSim", "z_WordCount", "HasImage", "z_NumImages"]
         if term.startswith("C(") or term in df.columns
     ]
     outcome_specs = [(outcome, family) for outcome, family in LEVEL1_OUTCOME_SPECS if outcome in df.columns]
@@ -2463,7 +2465,7 @@ def run_level1_content_analysis(master: pd.DataFrame) -> dict[str, pd.DataFrame]
             continue
         terms = [
             term
-            for term in ["C(TopContentCluster)", distance_term, "z_WordCount", "HasImage", "z_NumImages"]
+            for term in [LEVEL1_TOPIC_TERM, distance_term, "z_WordCount", "HasImage", "z_NumImages"]
             if term.startswith("C(") or term in df.columns
         ]
         for outcome, family in outcome_specs:
