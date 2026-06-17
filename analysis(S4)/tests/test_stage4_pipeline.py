@@ -723,6 +723,10 @@ def test_level3_matching_models_are_separate():
     assert "level3_model_a_matchscore" in set(tables["model_summary"]["model"])
     assert "level3_model_b_profession_match" in set(tables["model_summary"]["model"])
     assert "MatchScore_mean + ProfessionContentMatch_mean" not in formulas
+    assert "Treatment(reference='Home Design & Decoration')" in formulas
+    assert not tables["coefficients"]["term"].astype(str).str.contains(
+        r"\[T\.Home Design & Decoration\]", regex=True
+    ).any()
     assert {
         "depth_mean",
         "reshare_mean",

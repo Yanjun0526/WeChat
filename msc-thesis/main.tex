@@ -4,30 +4,26 @@
 
 \begin{document}
 
-\title{Your Thesis Title Here}
-\author{Yan W}
-\date{\today}
-\maketitle
+\input{frontmatter/front_matter}
 
-\pagenumbering{roman}
-\tableofcontents
-\listoffigures
-\listoftables
-
-\clearpage
 \pagenumbering{arabic}
+\setcounter{page}{1}
 
 \include{chapters/01_introduction}
 \include{chapters/02_literature_review}
-\include{chapters/03_methodology}
-\include{chapters/04_data}
-\include{chapters/05_results}
-\include{chapters/06_discussion}
-\include{chapters/07_conclusion}
+\include{chapters/03_data_and_research_context}
+\include{chapters/04_data_processing_feature_construction}
+\include{chapters/05_model_design_implementation}
+\include{chapters/06_empirical_results}
+\include{chapters/07_discussion_major_findings}
+\include{chapters/08_conclusion_limitations_future_work}
 
-\printbibliography
+\nocite{*}
+\printbibliography[heading=bibintoc,title={Bibliography}]
 
 \appendix
 \include{appendix/appendix_a}
+\include{appendix/appendix_b}
+\include{appendix/appendix_c}
 
 \end{document}

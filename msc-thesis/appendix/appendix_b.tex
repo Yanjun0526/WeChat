@@ -1,0 +1,73 @@
+\chapter{Implementation Pipeline and Reproducibility}
+\label{app:implementation-reproducibility}
+
+This appendix summarises the implementation pipeline and validation checks used to produce the three empirical datasets and generated result tables. It is intended as a self-contained record of the reproducibility materials retained with the dissertation.
+
+\section{Pipeline Overview}
+\label{app:b-pipeline-overview}
+
+The implementation follows the four-stage structure described in Chapter~\ref{chap:data-processing-and-feature-construction}. Table~\ref{tab:app-b-pipeline-overview} summarises the purpose and retained outputs of each stage.
+
+\begin{table}[H]
+\centering
+\small
+\caption{Implementation pipeline overview}
+\label{tab:app-b-pipeline-overview}
+\renewcommand{\arraystretch}{1.18}
+\begin{tabularx}{\textwidth}{>{\raggedright\arraybackslash}p{0.18\textwidth}>{\raggedright\arraybackslash}p{0.34\textwidth}>{\raggedright\arraybackslash}X}
+\toprule
+Stage & Main operation & Reproducibility output \\
+\midrule
+S1 & Clean and link WeChat reading/share records, article identifiers, and agent profile fields. & Content-linked behavioural foundation with 209,895 reading events and 1,051 linked articles. \\
+S2 & Extract article text/image metadata, generate LLM-assisted topic features, construct six-topic vectors, and compute semantic-consistency measures. & Standardised article-level content feature table with 811 valid articles. \\
+S3 & Correct propagation layers, rebuild article--agent cascades, and compute cascade/network measures. & Corrected reader-level diffusion records and reconstructed cascade-level measures. \\
+S4 & Assemble Level 1, Level 2, and Level 3 master datasets; construct matching variables; fit the empirical models; export validation and result tables. & Three level-specific master datasets, variable-role map, model summaries, coefficient tables, figures, and validation report. \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+\section{Validation Report}
+\label{app:b-validation-report}
+
+The Stage 4 validation report checks that the three master datasets match the expected analysis scope and that the legacy undifferentiated master file has been removed from the reporting workflow. The report was generated on 2026-06-09 and returned \texttt{valid = true}. Table~\ref{tab:app-b-validation-report} reports the retained checks.
+
+\begin{table}[H]
+\centering
+\small
+\caption{Stage 4 validation report checks}
+\label{tab:app-b-validation-report}
+\renewcommand{\arraystretch}{1.18}
+\begin{tabularx}{\textwidth}{>{\raggedright\arraybackslash}p{0.32\textwidth}>{\raggedleft\arraybackslash}p{0.14\textwidth}>{\raggedleft\arraybackslash}p{0.14\textwidth}>{\raggedright\arraybackslash}X}
+\toprule
+Check & Actual & Expected & Status \\
+\midrule
+Level 1 article--agent rows & 6,557 & 6,557 & Passed \\
+Level 2 agents & 592 & 592 & Passed \\
+Level 3 agent--topic rows & 1,142 & 1,142 & Passed \\
+Legacy analysis master removed & -- & -- & Passed \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+\section{Test Coverage}
+\label{app:b-test-coverage}
+
+The Stage 4 implementation is accompanied by 23 pytest tests. The tests do not replace substantive judgement about the research design, but they check that the implemented pipeline preserves the intended scope, variable construction logic, model separation, and reporting outputs. Table~\ref{tab:app-b-pytest-coverage} summarises the main coverage areas.
+
+\begin{table}[H]
+\centering
+\small
+\caption{Pytest coverage areas for the Stage 4 implementation}
+\label{tab:app-b-pytest-coverage}
+\renewcommand{\arraystretch}{1.18}
+\begin{tabularx}{\textwidth}{>{\raggedright\arraybackslash}p{0.32\textwidth}>{\raggedright\arraybackslash}X}
+\toprule
+Coverage area & Examples of checked behaviour \\
+\midrule
+Master-dataset construction & Key normalisation, article--agent row preservation, fallback matching, duplicate-key diagnostics, join-quality reporting, and English topic-label enforcement. \\
+Derived variables and validation & Construction of \varname{log\_reach}, matching variables, row-count checks, required-field checks, and source-readiness gate behaviour. \\
+Model estimation and diagnostics & Negative-binomial and over-dispersion handling, separate Level 3 matching specifications, topic-score and distance robustness, clustered-standard-error outputs, and no-activity-control Level 2 robustness. \\
+Reporting outputs & Variable-role map coverage, findings-summary contents, planned figure generation, validation-file writing, and cleanup of legacy outputs. \\
+\bottomrule
+\end{tabularx}
+\end{table}

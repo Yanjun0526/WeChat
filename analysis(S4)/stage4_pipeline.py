@@ -61,6 +61,8 @@ TOPIC_ZH_TO_EN = {
 CANONICAL_TOPICS = tuple(TOPIC_ZH_TO_EN.values())
 LEVEL1_TOPIC_REFERENCE = "Home Design & Decoration"
 LEVEL1_TOPIC_TERM = f"C(TopContentCluster, Treatment(reference={LEVEL1_TOPIC_REFERENCE!r}))"
+LEVEL3_TOPIC_REFERENCE = "Home Design & Decoration"
+LEVEL3_TOPIC_TERM = f"C(TopContentCluster, Treatment(reference={LEVEL3_TOPIC_REFERENCE!r}))"
 
 TOPIC_SCORE_COLUMN_MAP = {
     "家居设计与装修(Content)": "topic_home_design_decoration",
@@ -2609,7 +2611,7 @@ def run_level3_agent_topic_matching_analysis(master: pd.DataFrame) -> dict[str, 
     sparse_summaries: list[dict] = []
     sparse_coeffs: list[pd.DataFrame] = []
     controls = [
-        "C(TopContentCluster)",
+        LEVEL3_TOPIC_TERM,
         "C(JobCategory)",
         "C(agent_gender)",
         "z_log_agent_topic_article_n",

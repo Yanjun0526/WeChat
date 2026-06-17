@@ -1,4 +1,165 @@
-\chapter{Additional Materials}
-\label{app:additional-materials}
+\chapter{Content Feature Extraction Details (Stage 2)}
+\label{app:content-feature-extraction}
 
-% Add supplementary tables, figures, proofs, or extended results here.
+This appendix records the Stage 2 content-feature construction details that are too long for the main text. The extraction and clustering steps were performed with GPT-4o using the prompt templates below. Square-bracketed fields indicate values inserted at runtime for a specific article or clustering call.
+
+\section{LLM-Assisted Topic Extraction Prompts}
+\label{app:a-topic-extraction-prompts}
+
+The initial topic-extraction step used two prompt templates. The title-only prompt asked for two short Chinese topic descriptions based only on the article title:
+
+\begin{quote}
+\small
+\setstretch{1.15}
+{\cjkfont
+你是一名中文文本主题建模专家。\\
+请仅根据下列标题文字本身的内容来判断文章主题。\\
+请忽略任何品牌名、公司名、地名或现实世界背景知识，\\
+不要利用对“名匠”等品牌的认知。\\
+背景信息：名匠是一家普通公司名。\\
+请给出两个最有可能的主题类别，用简短中文表达。\\
+\\
+输出严格 JSON：\\
+\{\\
+\quad "top\_2\_title\_topics": ["主题1", "主题2"]\\
+\}\\
+\\
+标题：[article title]
+}
+\end{quote}
+
+The combined-content prompt asked for three short Chinese topic descriptions using the title, body text, and available images:
+
+\begin{quote}
+\small
+\setstretch{1.15}
+{\cjkfont
+你是一名中文文本主题建模专家。\\
+请根据以下文章标题、正文内容以及所附图片，综合判断主题。\\
+请输出三个最有可能的主题类别，用简短中文表达。\\
+\\
+输出严格 JSON：\\
+\{\\
+\quad "top\_3\_combined\_topics": ["主题1", "主题2", "主题3"]\\
+\}\\
+\\
+标题：[article title]\\
+正文：[first 4,000 characters of article body, followed by an ellipsis if longer]
+}
+\end{quote}
+
+The extraction calls used GPT-4o with temperature 0.3. The combined-content call used up to 30 image URLs when image URLs were available. The retry wrapper allowed up to six retries. In the recorded notebook, an oversized or rate-limited combined-content call could fall back to GPT-4o-mini, but the topic-clustering and final scoring templates below were defined for GPT-4o.
+
+\section{Topic Clustering Instruction and Settings}
+\label{app:a-topic-clustering-settings}
+
+After cleaning the initial extracted topic terms, the Stage 2 notebook pooled the title and combined-content terms. The clustering input contained 4,070 extracted topic terms, corresponding to 1,386 unique topic terms after deduplication. The 1,386 figure therefore describes the number of distinct topic terms in the pooled list, while the recorded clustering prompt inserted the complete pooled topic-term list. The clustering call used GPT-4o with temperature 0.4 and the following instruction. The runtime prompt inserted the complete topic-term list at the marked location.
+
+\begin{quote}
+\small
+\setstretch{1.15}
+{\cjkfont
+你是一名中文主题聚类专家。\\
+以下是从几百篇文档中提取的全部关键词（共 [number of topic terms] 个）：\\
+\\
+{[complete topic-term list]}\\
+\\
+请根据这些关键词的语义相似性，将它们归纳为 5-6 个主要类别（Cluster）。\\
+\\
+输出要求：\\
+1. 仅输出 JSON 数组；\\
+2. 每个元素只包含一个字段：\\
+\quad - Cluster: 类别名称（简短、有代表性）\\
+3. 严格输出 JSON，不要额外解释或描述。
+}
+\end{quote}
+
+After the six cluster labels had been produced, each article was scored against the fixed set of clusters. The title-cluster scoring prompt was:
+
+\begin{quote}
+\small
+\setstretch{1.15}
+{\cjkfont
+你是一名中文文本主题建模专家。\\
+请仅根据下列标题文字本身的内容来判断文章主题, 现在有以下 [number of clusters] 个聚类类别：\\
+{[cluster list]}。\\
+请分析以下文章标题在这些类别中的语义相关度，并给出每个类别的百分比分布。\\
+请忽略任何品牌名、公司名、地名或现实世界背景知识，\\
+不要利用对“名匠”等品牌的认知。\\
+背景信息：名匠是一家普通公司名。\\
+请只输出JSON，不要任何解释或注释。\\
+\\
+标题：[article title]\\
+\\
+输出严格 JSON：\\
+\{\\
+\quad "cluster\_percentages": \{\\
+\quad\quad "[cluster name]": 0-100之间的百分比,\\
+\quad\quad ...\\
+\quad \},\\
+\quad "top\_cluster": "主导类别名称"\\
+\}
+}
+\end{quote}
+
+The full-content cluster scoring prompt was:
+
+\begin{quote}
+\small
+\setstretch{1.15}
+{\cjkfont
+你是一名中文语义聚类分析专家。以下是 [number of clusters] 个聚类类别：\\
+{[cluster list]}。\\
+\\
+请根据文章标题、正文内容以及图片，判断该文章在这些类别中的百分比分布。\\
+请只输出JSON，不要任何解释或注释。\\
+\\
+输出严格 JSON：\\
+\{\\
+\quad "cluster\_percentages": \{\\
+\quad\quad "[cluster name]": 0-100之间的百分比,\\
+\quad\quad ...\\
+\quad \},\\
+\quad "top\_cluster": "主导类别名称"\\
+\}\\
+\\
+标题：[article title]\\
+正文：[first 4,000 characters of article body, followed by an ellipsis if longer]
+}
+\end{quote}
+
+\section{Topic-Label Mapping}
+\label{app:a-topic-label-mapping}
+
+\begin{table}[H]
+\centering
+\small
+\caption{Chinese--English topic-label mapping}
+\label{tab:app-a-topic-label-mapping}
+\renewcommand{\arraystretch}{1.2}
+\begin{tabularx}{0.88\textwidth}{>{\raggedright\arraybackslash}p{0.38\textwidth}>{\raggedright\arraybackslash}X}
+\toprule
+Chinese label & English canonical label \\
+\midrule
+{\cjkfont 家居设计与装修} & Home Design \& Decoration \\
+{\cjkfont 房地产与建筑} & Real Estate \& Architecture \\
+{\cjkfont 活动与促销} & Events \& Promotions \\
+{\cjkfont 品牌与市场推广} & Brand \& Marketing \\
+{\cjkfont 生活方式与文化} & Lifestyle \& Culture \\
+{\cjkfont 客户服务与管理} & Customer Service \& Management \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+\section{Vector-Based Consistency Measures}
+\label{app:a-vector-measures}
+
+Let \(\mathbf{t}=(t_1,\ldots,t_6)\) denote the title-cluster percentage vector and \(\mathbf{c}=(c_1,\ldots,c_6)\) denote the full-content cluster percentage vector, ordered by the same six topic labels. The Stage 2 notebook computed the following three measures:
+
+\begin{align}
+\mathrm{CosineSim} &= \frac{\mathbf{t}\cdot\mathbf{c}}{\lVert\mathbf{t}\rVert_2\lVert\mathbf{c}\rVert_2}, \\
+\mathrm{EuclideanDist} &= \sqrt{\sum_{k=1}^{6}(t_k-c_k)^2}, \\
+\mathrm{ManhattanDist} &= \sum_{k=1}^{6}\lvert t_k-c_k\rvert .
+\end{align}
+
+If either vector had zero norm, \(\mathrm{CosineSim}\) was set to missing in the processing notebook. Higher \(\mathrm{CosineSim}\) indicates stronger title--content alignment, whereas higher distance values indicate larger differences between the title and full-content topic distributions.

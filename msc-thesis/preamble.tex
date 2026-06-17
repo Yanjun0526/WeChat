@@ -1,10 +1,27 @@
-\usepackage[utf8]{inputenc}
-\usepackage[T1]{fontenc}
+\usepackage{iftex}
+\ifXeTeX
+  \usepackage{fontspec}
+  \setmainfont{Times New Roman}
+  \setsansfont{Arial}
+  \setmonofont{Consolas}
+  \newfontfamily\cjkfont{SimSun}
+\else
+  \usepackage[utf8]{inputenc}
+  \usepackage[T1]{fontenc}
+\fi
 \usepackage{setspace}
 \usepackage{geometry}
 \usepackage{graphicx}
 \usepackage{booktabs}
+\usepackage{longtable}
+\usepackage{array}
+\usepackage{tabularx}
+\usepackage{makecell}
+\usepackage{textcomp}
 \usepackage{amsmath, amssymb}
+\numberwithin{equation}{chapter}
+\usepackage{xurl}
+\usepackage{tocloft}
 \usepackage{hyperref}
 \usepackage{caption}
 \usepackage{subcaption}
@@ -20,10 +37,73 @@
 \addbibresource{references.bib}
 
 \geometry{
-    margin=1in
+    margin=25mm,
+    footskip=8mm
 }
 
-\onehalfspacing
+\doublespacing
+\setlength{\parindent}{2em}
+\setlength{\parskip}{0pt}
+\setlength{\emergencystretch}{3em}
+\setlength{\tabcolsep}{4pt}
+\urlstyle{same}
+\Urlmuskip=0mu\relax
+\AtBeginBibliography{\raggedright}
+\renewcommand{\contentsname}{Table of Contents}
+\renewcommand{\cfttoctitlefont}{\normalfont\bfseries\fontsize{14}{16.8}\selectfont}
+\renewcommand{\cftaftertoctitle}{\par}
+\renewcommand{\cftloftitlefont}{\normalfont\bfseries\fontsize{14}{16.8}\selectfont}
+\renewcommand{\cftafterloftitle}{\par}
+\renewcommand{\cftlottitlefont}{\normalfont\bfseries\fontsize{14}{16.8}\selectfont}
+\renewcommand{\cftafterlottitle}{\par}
+\setlength{\cftbeforetoctitleskip}{0pt}
+\setlength{\cftbeforeloftitleskip}{0pt}
+\setlength{\cftbeforelottitleskip}{0pt}
+\setlength{\cftaftertoctitleskip}{18pt}
+\setlength{\cftafterloftitleskip}{18pt}
+\setlength{\cftafterlottitleskip}{18pt}
+\renewcommand{\cftchappresnum}{Chapter~}
+\setlength{\cftchapnumwidth}{5.8em}
+\renewcommand{\cftchapleader}{\cftdotfill{\cftdotsep}}
+\renewcommand{\cftfigpresnum}{Figure~}
+\setlength{\cftfignumwidth}{5.2em}
+\renewcommand{\cfttabpresnum}{Table~}
+\setlength{\cfttabnumwidth}{5.0em}
+
+\newcommand{\varname}[1]{\ifmmode\text{\texttt{#1}}\else\texttt{#1}\fi}
+\newcommand{\frontmatterheading}[1]{%
+  {\centering\normalfont\bfseries\fontsize{14}{16.8}\selectfont #1\par}%
+  \vspace{18pt}%
+}
+
+\makeatletter
+\newcommand{\fronttableofcontents}{%
+  \frontmatterheading{Table of Contents}%
+  \@starttoc{toc}%
+}
+\newcommand{\frontlistoffigures}{%
+  \frontmatterheading{List of Figures}%
+  \@starttoc{lof}%
+}
+\newcommand{\frontlistoftables}{%
+  \frontmatterheading{List of Tables}%
+  \@starttoc{lot}%
+}
+\renewcommand{\@makechapterhead}[1]{%
+  \vspace*{20pt}%
+  {\centering\normalfont\bfseries\Large
+  \@chapapp\space \thechapter\quad #1\par}%
+  \vspace{24pt}%
+}
+\renewcommand{\@makeschapterhead}[1]{%
+  \vspace*{20pt}%
+  {\centering\normalfont\bfseries\Large #1\par}%
+  \vspace{24pt}%
+}
+\makeatother
+
+\captionsetup[table]{position=above, font=small, labelfont=bf}
+\captionsetup[figure]{position=below, font=small, labelfont=bf}
 
 \hypersetup{
     colorlinks=true,
